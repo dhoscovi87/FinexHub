@@ -1,7 +1,7 @@
 import { Express } from "express";
 import { db } from "../db";
 import { wallets, transactions } from "@db/schema";
-import { eq } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 
 export function registerRoutes(app: Express) {
   // Get user balances
@@ -28,15 +28,39 @@ export function registerRoutes(app: Express) {
   app.get("/api/transactions", async (req, res) => {
     try {
       const userId = 1; // Replace with actual user ID from auth
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const offset = (page - 1) * limit;
+
+      // Get total count for pagination
+      const [{ count }] = await db
+        .select({ count: sql`count(*)::int` })
+        .from(transactions)
+        .where(eq(transactions.userId, userId));
+
+      // Get paginated transactions sorted by newest first
       const history = await db.select()
         .from(transactions)
         .where(eq(transactions.userId, userId))
-        .orderBy(transactions.createdAt)
-        .limit(20);
+        .orderBy(desc(transactions.createdAt))
+        .limit(limit)
+        .offset(offset);
       
-      res.json(history);
+      res.json({
+        data: history,
+        pagination: {
+          total: count,
+          page,
+          totalPages: Math.ceil(count / limit),
+          hasMore: offset + history.length < count
+        }
+      });
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch transactions" });
+      console.error("Failed to fetch transactions:", error);
+      res.status(500).json({ 
+        error: "Failed to fetch transactions",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 

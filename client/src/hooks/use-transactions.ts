@@ -3,19 +3,39 @@ import type { Transaction } from "@db/schema";
 
 interface TransactionListParams {
   limit?: number;
+  page?: number;
 }
 
-async function fetchTransactions({ limit }: TransactionListParams = {}): Promise<Transaction[]> {
+interface TransactionResponse {
+  data: Transaction[];
+  pagination: {
+    total: number;
+    page: number;
+    totalPages: number;
+    hasMore: boolean;
+  };
+}
+
+async function fetchTransactions({ limit, page }: TransactionListParams = {}): Promise<TransactionResponse> {
   const url = new URL("/api/transactions", window.location.origin);
   if (limit) {
     url.searchParams.append("limit", limit.toString());
   }
-  
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error("Failed to fetch transactions");
+  if (page) {
+    url.searchParams.append("page", page.toString());
   }
-  return response.json();
+  
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch transactions: ${errorText}`);
+    }
+    return response.json();
+  } catch (error) {
+    console.error("Transaction fetch error:", error);
+    throw error instanceof Error ? error : new Error("Failed to fetch transactions");
+  }
 }
 
 export function useTransactions(params: TransactionListParams = {}) {
@@ -23,5 +43,7 @@ export function useTransactions(params: TransactionListParams = {}) {
     queryKey: ["transactions", params],
     queryFn: () => fetchTransactions(params),
     refetchInterval: 30000, // Refresh every 30 seconds
+    retry: 3,
+    staleTime: 1000 * 60, // Consider data stale after 1 minute
   });
 }

@@ -8,15 +8,25 @@ interface TransactionHistoryProps {
 }
 
 export function TransactionHistory({ limit }: TransactionHistoryProps) {
-  const { data: transactions, isLoading } = useTransactions({ limit });
+  const { data, isLoading, isError, error } = useTransactions({ limit });
 
   if (isLoading) {
     return <div>Loading transactions...</div>;
   }
 
-  if (!transactions?.length) {
+  if (isError) {
+    return (
+      <div className="text-center text-destructive">
+        Error: {error instanceof Error ? error.message : "Failed to load transactions"}
+      </div>
+    );
+  }
+
+  if (!data?.data?.length) {
     return <div className="text-center text-muted-foreground">No transactions yet</div>;
   }
+
+  const transactions = data.data;
 
   const getIcon = (type: string) => {
     switch (type) {
