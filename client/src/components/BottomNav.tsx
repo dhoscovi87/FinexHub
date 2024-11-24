@@ -1,5 +1,6 @@
 import { Home, Send, ArrowDownLeft, Repeat, User } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import { ThemeToggle } from "./ThemeToggle";
 
 export default function BottomNav() {
   const [location] = useLocation();
@@ -11,6 +12,12 @@ export default function BottomNav() {
     { icon: Repeat, label: "Swap", href: "/swap" },
     { icon: User, label: "Profile", href: "/profile" },
   ];
+
+  const renderThemeToggle = () => (
+    <div className="flex items-center justify-center">
+      <ThemeToggle />
+    </div>
+  );
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-background border-t md:hidden">

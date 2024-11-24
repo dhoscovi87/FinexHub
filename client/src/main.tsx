@@ -2,6 +2,8 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { Switch, Route, Link } from "wouter";
 import { Home, Send, ArrowDownLeft, Repeat, User } from "lucide-react";
+import { ThemeProvider } from "./components/ThemeProvider";
+import { ThemeToggle } from "./components/ThemeToggle";
 import "./index.css";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
@@ -42,6 +44,9 @@ function Router() {
                   <User className="h-5 w-5 mr-3" />
                   <span>Profile</span>
                 </Link>
+              <div className="mt-4">
+                  <ThemeToggle />
+                </div>
               </div>
             </nav>
           </aside>
@@ -64,10 +69,12 @@ function Router() {
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <Router />
-      <Toaster />
-    </QueryClientProvider>
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <Router />
+        <Toaster />
+      </QueryClientProvider>
+    </ThemeProvider>
   </StrictMode>,
 );
 
