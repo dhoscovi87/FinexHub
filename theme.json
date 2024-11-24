@@ -1,20 +1,6 @@
 {
   "variant": "professional",
-  "primary": {
-    "light": "hsl(215, 100%, 50%)",
-    "dark": "hsl(215, 100%, 65%)"
-  },
-  "background": {
-    "light": "hsl(0, 0%, 100%)",
-    "dark": "hsl(222, 47%, 11%)"
-  },
-  "foreground": {
-    "light": "hsl(222, 47%, 11%)",
-    "dark": "hsl(213, 31%, 91%)"
-  },
-  "muted": {
-    "light": "hsl(210, 40%, 96%)",
-    "dark": "hsl(223, 47%, 15%)"
-  },
+  "appearance": "system",
+  "primary": "hsl(215, 100%, 50%)",
   "radius": 1.0
 }
