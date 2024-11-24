@@ -30,18 +30,31 @@ export function registerRoutes(app: Express) {
       const userId = 1; // Replace with actual user ID from auth
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 20;
+      const search = req.query.search as string;
       const offset = (page - 1) * limit;
+
+      let query = db
+        .select()
+        .from(transactions)
+        .where(eq(transactions.userId, userId));
+
+      if (search) {
+        query = query.where(
+          sql`(
+            LOWER(type) LIKE ${`%${search.toLowerCase()}%`} OR 
+            CAST(amount AS TEXT) LIKE ${`%${search}%`} OR
+            LOWER(COALESCE(note, '')) LIKE ${`%${search.toLowerCase()}%`}
+          )`
+        );
+      }
 
       // Get total count for pagination
       const [{ count }] = await db
         .select({ count: sql`count(*)::int` })
-        .from(transactions)
-        .where(eq(transactions.userId, userId));
+        .from(query.as("filtered_transactions"));
 
       // Get paginated transactions sorted by newest first
-      const history = await db.select()
-        .from(transactions)
-        .where(eq(transactions.userId, userId))
+      const history = await query
         .orderBy(desc(transactions.createdAt))
         .limit(limit)
         .offset(offset);

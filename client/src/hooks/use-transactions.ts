@@ -4,6 +4,7 @@ import type { Transaction } from "@db/schema";
 interface TransactionListParams {
   limit?: number;
   page?: number;
+  search?: string;
 }
 
 interface TransactionResponse {
@@ -16,13 +17,16 @@ interface TransactionResponse {
   };
 }
 
-async function fetchTransactions({ limit, page }: TransactionListParams = {}): Promise<TransactionResponse> {
+async function fetchTransactions({ limit, page, search }: TransactionListParams = {}): Promise<TransactionResponse> {
   const url = new URL("/api/transactions", window.location.origin);
   if (limit) {
     url.searchParams.append("limit", limit.toString());
   }
   if (page) {
     url.searchParams.append("page", page.toString());
+  }
+  if (search) {
+    url.searchParams.append("search", search);
   }
   
   try {
