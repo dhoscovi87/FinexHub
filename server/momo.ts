@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 const BASE_URL = 'https://sandbox.momodeveloper.mtn.com/v1_0';
 const API_ENDPOINTS = {
-  token: `${BASE_URL}/collection/token`,
+  token: `${BASE_URL}/collection/v1_0/token`,
   apiUser: `${BASE_URL}/apiuser`,
   requestToPay: `${BASE_URL}/collection/v1_0/requesttopay`,
   disbursement: `${BASE_URL}/disbursement/v1_0/transfer`,
