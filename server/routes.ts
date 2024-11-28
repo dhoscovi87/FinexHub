@@ -7,7 +7,42 @@ import { momoApi } from "./momo";
 const DEPOSIT_CALLBACK_URL = process.env.DEPOSIT_CALLBACK_URL || 'https://your-callback-url.com/momo/deposit';
 const WITHDRAWAL_CALLBACK_URL = process.env.WITHDRAWAL_CALLBACK_URL || 'https://your-callback-url.com/momo/withdrawal';
 
-export function registerRoutes(app: Express) {
+// Initialize MoMo API
+async function initializeMoMoApi(retries = 3, delay = 5000): Promise<boolean> {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      console.log(`Attempting to initialize MoMo API (attempt ${attempt}/${retries})`);
+      
+      const referenceId = momoApi.generateUUID();
+      const callbackHost = DEPOSIT_CALLBACK_URL;
+      
+      await momoApi.createApiUser(referenceId, callbackHost);
+      console.log('API User created successfully');
+      
+      const apiKey = await momoApi.createApiKey(referenceId);
+      console.log('API Key created successfully');
+      
+      const userDetails = await momoApi.getApiUserDetails(referenceId);
+      console.log('API User details retrieved:', userDetails);
+      
+      return true;
+    } catch (error) {
+      console.error(`MoMo API initialization failed (attempt ${attempt}/${retries}):`, error);
+      if (attempt < retries) {
+        console.log(`Retrying in ${delay/1000} seconds...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+  return false;
+}
+
+export async function registerRoutes(app: Express) {
+  // Initialize MoMo API when server starts
+  const momoInitialized = await initializeMoMoApi();
+  if (!momoInitialized) {
+    console.error('Failed to initialize MoMo API after all retries');
+  }
   // Get user balances
   app.get("/api/balances", async (req, res) => {
     try {
@@ -169,6 +204,20 @@ export function registerRoutes(app: Express) {
 
       if (!amount || !phoneNumber) {
         return res.status(400).json({ error: "Amount and phone number are required" });
+      }
+
+      // Verify MoMo API is initialized
+      try {
+        await momoApi.getToken();
+      } catch (error) {
+        console.log('MoMo API not initialized, attempting to initialize...');
+        const initialized = await initializeMoMoApi();
+        if (!initialized) {
+          return res.status(503).json({
+            error: "Mobile Money service temporarily unavailable",
+            details: "Failed to initialize payment service. Please try again later."
+          });
+        }
       }
 
       // Create a pending transaction

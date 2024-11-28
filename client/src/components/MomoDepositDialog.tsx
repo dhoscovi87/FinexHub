@@ -47,6 +47,9 @@ export function MomoDepositDialog({ open, onOpenChange }: MomoDepositDialogProps
       const data = await response.json();
 
       if (!response.ok) {
+        if (response.status === 503) {
+          throw new Error("Mobile Money service is currently unavailable. Please try again later.");
+        }
         throw new Error(data.details || data.error || "Failed to initiate deposit");
       }
 
