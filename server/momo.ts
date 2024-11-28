@@ -1,4 +1,17 @@
 import { v4 as uuidv4 } from 'uuid';
+import fetch from 'node-fetch';
+import https from 'https';
+
+// WARNING: This is a development-only configuration to handle self-signed certificates
+// In production, proper SSL certificate verification should be enabled
+if (process.env.NODE_ENV !== 'production') {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+}
+
+// Configure SSL agent for requests
+const agent = new https.Agent({
+  rejectUnauthorized: process.env.NODE_ENV === 'production'
+});
 
 const BASE_URL = 'https://sandbox.momodeveloper.mtn.com';
 const API_ENDPOINTS = {
@@ -92,6 +105,7 @@ export class MoMoAPI {
     try {
       const response = await fetch(API_ENDPOINTS.apiUser, {
         method: 'POST',
+        agent,
         headers: {
           'X-Reference-Id': referenceId,
           'Ocp-Apim-Subscription-Key': this.subscriptionKey,
@@ -160,6 +174,7 @@ export class MoMoAPI {
     try {
       const response = await fetch(`${API_ENDPOINTS.apiUser}/${apiUserId}`, {
         method: 'GET',
+        agent,
         headers: {
           'Ocp-Apim-Subscription-Key': this.subscriptionKey
         }
@@ -201,6 +216,7 @@ export class MoMoAPI {
       
       const response = await fetch(API_ENDPOINTS.token, {
         method: 'POST',
+        agent,
         headers: {
           'Authorization': `Basic ${auth}`,
           'Ocp-Apim-Subscription-Key': this.subscriptionKey,
@@ -284,6 +300,7 @@ export class MoMoAPI {
     try {
       const response = await fetch(API_ENDPOINTS.requestToPay, {
         method: 'POST',
+        agent,
         headers: {
           'Authorization': `Bearer ${token}`,
           'X-Reference-Id': referenceId,
@@ -327,6 +344,7 @@ export class MoMoAPI {
     try {
       const response = await fetch(`${API_ENDPOINTS.requestToPay}/${referenceId}`, {
         method: 'GET',
+        agent,
         headers: {
           'Authorization': `Bearer ${token}`,
           'X-Target-Environment': 'sandbox',
@@ -363,6 +381,7 @@ export class MoMoAPI {
     try {
       const response = await fetch(API_ENDPOINTS.disbursement, {
         method: 'POST',
+        agent,
         headers: {
           'Authorization': `Bearer ${token}`,
           'X-Reference-Id': referenceId,
@@ -406,6 +425,7 @@ export class MoMoAPI {
     try {
       const response = await fetch(`${API_ENDPOINTS.disbursement}/${referenceId}`, {
         method: 'GET',
+        agent,
         headers: {
           'Authorization': `Bearer ${token}`,
           'X-Target-Environment': 'sandbox',
