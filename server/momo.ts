@@ -1,9 +1,9 @@
 import { v4 as uuidv4 } from 'uuid';
 
-const BASE_URL = 'https://sandbox.momodeveloper.mtn.com/v1_0';
+const BASE_URL = 'https://sandbox.momodeveloper.mtn.com';
 const API_ENDPOINTS = {
-  token: `${BASE_URL}/collection/token`,
-  apiUser: `${BASE_URL}/apiuser`,
+  token: `${BASE_URL}/collection/v1_0/token`,
+  apiUser: `${BASE_URL}/v1_0/apiuser`,
   requestToPay: `${BASE_URL}/collection/v1_0/requesttopay`,
   disbursement: `${BASE_URL}/disbursement/v1_0/transfer`,
 };
@@ -90,7 +90,7 @@ export class MoMoAPI {
    */
   async createApiUser(referenceId: string, callbackHost: string): Promise<void> {
     try {
-      const response = await fetch(`${BASE_URL}/apiuser`, {
+      const response = await fetch(`${BASE_URL}/v1_0/apiuser`, {
         method: 'POST',
         headers: {
           'X-Reference-Id': referenceId,
@@ -130,7 +130,7 @@ export class MoMoAPI {
    */
   async createApiKey(apiUserId: string): Promise<string> {
     try {
-      const response = await fetch(`${BASE_URL}/apiuser/${apiUserId}/apikey`, {
+      const response = await fetch(`${BASE_URL}/v1_0/apiuser/${apiUserId}/apikey`, {
         method: 'POST',
         headers: {
           'Ocp-Apim-Subscription-Key': this.subscriptionKey
@@ -158,7 +158,7 @@ export class MoMoAPI {
    */
   async getApiUserDetails(apiUserId: string): Promise<ApiUserResponse> {
     try {
-      const response = await fetch(`${BASE_URL}/apiuser/${apiUserId}`, {
+      const response = await fetch(`${BASE_URL}/v1_0/apiuser/${apiUserId}`, {
         method: 'GET',
         headers: {
           'Ocp-Apim-Subscription-Key': this.subscriptionKey
