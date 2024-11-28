@@ -1,6 +1,12 @@
 import { v4 as uuidv4 } from 'uuid';
 
 const BASE_URL = 'https://sandbox.momodeveloper.mtn.com/v1_0';
+const API_ENDPOINTS = {
+  token: `${BASE_URL}/collection/token`,
+  apiUser: `${BASE_URL}/apiuser`,
+  requestToPay: `${BASE_URL}/collection/v1_0/requesttopay`,
+  disbursement: `${BASE_URL}/disbursement/v1_0/transfer`,
+};
 const TOKEN_VALIDITY_DURATION = 3600; // 1 hour in seconds
 
 interface ApiUserResponse {
@@ -170,8 +176,9 @@ export class MoMoAPI {
     }
 
     try {
+      console.log('Requesting new access token...');
       const auth = Buffer.from(`${this.apiUser}:${this.apiKey}`).toString('base64');
-      const response = await fetch(`${BASE_URL}/collection/token/`, {
+      const response = await fetch(API_ENDPOINTS.token, {
         method: 'POST',
         headers: {
           'Authorization': `Basic ${auth}`,
@@ -179,12 +186,25 @@ export class MoMoAPI {
         }
       });
 
+      console.log('Token request response:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries())
+      });
+
       if (!response.ok) {
-        const error = await response.text();
-        throw new MoMoError(`Failed to get token: ${error}`, response.status);
+        const errorText = await response.text();
+        console.error('Token request failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText
+        });
+        throw new MoMoError(`Failed to get token: ${errorText}`, response.status);
       }
 
       const data: TokenResponse = await response.json();
+      console.log('Token request successful, expires in:', data.expires_in, 'seconds');
+      
       this.accessToken = data.access_token;
       this.tokenExpiry = Date.now() + (data.expires_in * 1000);
       return this.accessToken;
@@ -192,6 +212,7 @@ export class MoMoAPI {
       if (error instanceof MoMoError) {
         throw error;
       }
+      console.error('Unexpected error during token request:', error);
       throw new MoMoError(`Failed to get token: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
