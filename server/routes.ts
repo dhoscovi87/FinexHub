@@ -109,27 +109,39 @@ export function registerRoutes(app: Express) {
   });
 
   // MoMo API routes
-  app.post("/api/momo/apiuser", async (req, res) => {
+  app.post("/api/momo/test-integration", async (req, res) => {
     try {
-      const { callbackHost } = req.body;
-      
-      if (!callbackHost) {
-        return res.status(400).json({ error: "callbackHost is required" });
-      }
-
+      // Step 1: Generate UUID for reference
       const referenceId = momoApi.generateUUID();
+      console.log('Generated Reference ID:', referenceId);
+
+      // Step 2: Create API user
+      const callbackHost = process.env.DEPOSIT_CALLBACK_URL || req.get('origin') || 'http://localhost:5000';
+      console.log('Using callback host:', callbackHost);
+      
       await momoApi.createApiUser(referenceId, callbackHost);
-      
+      console.log('API User created successfully');
+
+      // Step 3: Create API key
       const apiKey = await momoApi.createApiKey(referenceId);
-      
+      console.log('API Key created successfully');
+
+      // Step 4: Get API user details
+      const userDetails = await momoApi.getApiUserDetails(referenceId);
+      console.log('API User details:', userDetails);
+
       res.json({
-        referenceId,
-        apiKey
+        success: true,
+        message: 'MoMo API integration test successful',
+        data: {
+          referenceId,
+          userDetails
+        }
       });
     } catch (error) {
-      console.error("MoMo API error:", error);
+      console.error("MoMo API integration test failed:", error);
       res.status(500).json({ 
-        error: "Failed to create MoMo API user",
+        error: "Failed to test MoMo API integration",
         details: error instanceof Error ? error.message : "Unknown error"
       });
     }
