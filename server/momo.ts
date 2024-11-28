@@ -221,6 +221,8 @@ export class MoMoAPI {
           'Authorization': `Basic ${auth}`,
           'Ocp-Apim-Subscription-Key': this.subscriptionKey,
           'X-Target-Environment': 'sandbox',
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache'
         }
       });
 
@@ -232,6 +234,12 @@ export class MoMoAPI {
 
       if (!response.ok) {
         const errorText = await response.text();
+        console.error('Full response:', {
+          status: response.status,
+          headers: Object.fromEntries(response.headers.entries()),
+          body: errorText
+        });
+
         let parsedError;
         try {
           parsedError = JSON.parse(errorText);
@@ -248,7 +256,9 @@ export class MoMoAPI {
           requestHeaders: {
             'Authorization': 'Basic [hidden]',
             'Ocp-Apim-Subscription-Key': '[hidden]',
-            'X-Target-Environment': 'sandbox'
+            'X-Target-Environment': 'sandbox',
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache'
           }
         };
 
