@@ -2,6 +2,7 @@ import { Express } from "express";
 import { db } from "../db";
 import { wallets, transactions } from "@db/schema";
 import { eq, desc, sql } from "drizzle-orm";
+import { momoApi } from "./momo";
 
 export function registerRoutes(app: Express) {
   // Get user balances
@@ -96,6 +97,47 @@ export function registerRoutes(app: Express) {
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: "Failed to swap currencies" });
+    }
+  });
+
+  // MoMo API routes
+  app.post("/api/momo/apiuser", async (req, res) => {
+    try {
+      const { callbackHost } = req.body;
+      
+      if (!callbackHost) {
+        return res.status(400).json({ error: "callbackHost is required" });
+      }
+
+      const referenceId = momoApi.generateUUID();
+      await momoApi.createApiUser(referenceId, callbackHost);
+      
+      const apiKey = await momoApi.createApiKey(referenceId);
+      
+      res.json({
+        referenceId,
+        apiKey
+      });
+    } catch (error) {
+      console.error("MoMo API error:", error);
+      res.status(500).json({ 
+        error: "Failed to create MoMo API user",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  app.get("/api/momo/apiuser/:userId", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const details = await momoApi.getApiUserDetails(userId);
+      res.json(details);
+    } catch (error) {
+      console.error("MoMo API error:", error);
+      res.status(500).json({ 
+        error: "Failed to get MoMo API user details",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 }
