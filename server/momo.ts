@@ -54,6 +54,22 @@ export class MoMoAPI {
   private accessToken: string | null = null;
   private tokenExpiry: number = 0;
 
+  /**
+   * Public method to verify token validity
+   * @returns A promise that resolves to true if token is valid, or throws an error if validation fails
+   */
+  public async verifyToken(): Promise<boolean> {
+    try {
+      await this.getToken();
+      return true;
+    } catch (error) {
+      if (error instanceof MoMoError) {
+        throw error;
+      }
+      throw new MoMoError('Token verification failed', error instanceof Error ? error.cause as number : undefined);
+    }
+  }
+
   constructor() {
     const key = process.env.MTN_MOMO_SUBSCRIPTION_KEY;
     if (!key) {

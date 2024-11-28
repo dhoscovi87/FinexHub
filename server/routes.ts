@@ -208,9 +208,9 @@ export async function registerRoutes(app: Express) {
 
       // Verify MoMo API is initialized
       try {
-        await momoApi.getToken();
+        await momoApi.verifyToken();
       } catch (error) {
-        console.log('MoMo API not initialized, attempting to initialize...');
+        console.log('MoMo API token verification failed, attempting to initialize...', error);
         const initialized = await initializeMoMoApi();
         if (!initialized) {
           return res.status(503).json({
