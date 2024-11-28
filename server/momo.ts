@@ -15,10 +15,10 @@ const agent = new https.Agent({
 
 const BASE_URL = 'https://sandbox.momodeveloper.mtn.com';
 const API_ENDPOINTS = {
-  token: `${BASE_URL}/collection/token`,
+  token: `${BASE_URL}/collection/v1_0/token`,
   apiUser: `${BASE_URL}/v1_0/apiuser`,
   requestToPay: `${BASE_URL}/collection/v1_0/requesttopay`,
-  disbursement: `${BASE_URL}/disbursement/v1_0/transfer`,
+  disbursement: `${BASE_URL}/disbursement/v1_0/transfer`
 };
 const TOKEN_VALIDITY_DURATION = 3600; // 1 hour in seconds
 
@@ -185,13 +185,28 @@ export class MoMoAPI {
         throw new MoMoError(`Failed to get API user details: ${error}`, response.status);
       }
 
-      return response.json();
+      return response.json() as Promise<ApiUserResponse>;
     } catch (error) {
       if (error instanceof MoMoError) {
         throw error;
       }
       throw new MoMoError(`Failed to get API user details: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  }
+
+  /**
+   * Get OAuth token with retry logic
+   */
+  private async getTokenWithRetry(retries = 3): Promise<string> {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        return await this.getToken();
+      } catch (error) {
+        if (attempt === retries) throw error;
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+      }
+    }
+    throw new Error('Failed to get token after retries');
   }
 
   /**
@@ -208,7 +223,7 @@ export class MoMoAPI {
 
     try {
       console.log('Requesting new access token...');
-      console.log('Request URL:', API_ENDPOINTS.token);
+      console.log('Making token request to:', API_ENDPOINTS.token);
       
       const auth = Buffer.from(`${this.apiUser}:${this.apiKey}`).toString('base64');
       // Log authorization header format without credentials
@@ -220,9 +235,7 @@ export class MoMoAPI {
         headers: {
           'Authorization': `Basic ${auth}`,
           'Ocp-Apim-Subscription-Key': this.subscriptionKey,
-          'X-Target-Environment': 'sandbox',
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache'
+          'X-Target-Environment': 'sandbox'
         }
       });
 
@@ -280,7 +293,7 @@ export class MoMoAPI {
         }
       }
 
-      const data: TokenResponse = await response.json();
+      const data = await response.json() as TokenResponse;
       console.log('Token request successful, expires in:', data.expires_in, 'seconds');
       
       this.accessToken = data.access_token;
