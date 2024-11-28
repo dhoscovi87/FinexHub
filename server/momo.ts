@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 
-const BASE_URL = 'https://sandbox.momodeveloper.mtn.com';
+const BASE_URL = 'https://sandbox.momodeveloper.mtn.com/v1_0';
 const TOKEN_VALIDITY_DURATION = 3600; // 1 hour in seconds
 
 interface ApiUserResponse {
@@ -73,9 +73,16 @@ export class MoMoAPI {
         headers: {
           'X-Reference-Id': referenceId,
           'Ocp-Apim-Subscription-Key': this.subscriptionKey,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache'
         },
         body: JSON.stringify({ providerCallbackHost: callbackHost })
+      });
+
+      console.log('API User creation response:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries())
       });
 
       if (!response.ok) {
