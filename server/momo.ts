@@ -15,7 +15,7 @@ const agent = new https.Agent({
 
 const BASE_URL = 'https://sandbox.momodeveloper.mtn.com';
 const API_ENDPOINTS = {
-  token: `${BASE_URL}/collection/v1_0/token`,
+  token: `${BASE_URL}/collection/v2/token`,
   apiUser: `${BASE_URL}/v1_0/apiuser`,
   requestToPay: `${BASE_URL}/collection/v1_0/requesttopay`,
   disbursement: `${BASE_URL}/disbursement/v1_0/transfer`
@@ -224,6 +224,16 @@ export class MoMoAPI {
     try {
       console.log('Requesting new access token...');
       console.log('Making token request to:', API_ENDPOINTS.token);
+      console.log('Complete token endpoint URL:', `${API_ENDPOINTS.token}`);
+      console.log('Request details:', {
+        url: API_ENDPOINTS.token,
+        method: 'POST',
+        headers: {
+          'Authorization': 'Basic [credentials]',
+          'Ocp-Apim-Subscription-Key': '[hidden]',
+          'X-Target-Environment': 'sandbox'
+        }
+      });
       
       const auth = Buffer.from(`${this.apiUser}:${this.apiKey}`).toString('base64');
       // Log authorization header format without credentials
