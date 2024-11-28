@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 
-const BASE_URL = 'https://momodeveloper.mtn.com';
+const BASE_URL = 'https://sandbox.momodeveloper.mtn.com';
 
 interface ApiUserResponse {
   providerCallbackHost: string;

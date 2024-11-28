@@ -34,28 +34,32 @@ export function registerRoutes(app: Express) {
       const search = req.query.search as string;
       const offset = (page - 1) * limit;
 
-      let query = db
+      const baseQuery = db
         .select()
         .from(transactions)
         .where(eq(transactions.userId, userId));
 
-      if (search) {
-        query = query.where(
-          sql`(
+      const searchCondition = search
+        ? sql`(
             LOWER(type) LIKE ${`%${search.toLowerCase()}%`} OR 
             CAST(amount AS TEXT) LIKE ${`%${search}%`} OR
             LOWER(COALESCE(note, '')) LIKE ${`%${search.toLowerCase()}%`}
           )`
-        );
-      }
+        : undefined;
+
+      const finalQuery = searchCondition
+        ? baseQuery.where(searchCondition)
+        : baseQuery;
 
       // Get total count for pagination
-      const [{ count }] = await db
-        .select({ count: sql`count(*)::int` })
-        .from(query.as("filtered_transactions"));
+      const [countResult] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(finalQuery.as("filtered_transactions"));
+
+      const total = countResult?.count || 0;
 
       // Get paginated transactions sorted by newest first
-      const history = await query
+      const history = await finalQuery
         .orderBy(desc(transactions.createdAt))
         .limit(limit)
         .offset(offset);
@@ -63,10 +67,10 @@ export function registerRoutes(app: Express) {
       res.json({
         data: history,
         pagination: {
-          total: count,
+          total,
           page,
-          totalPages: Math.ceil(count / limit),
-          hasMore: offset + history.length < count
+          totalPages: Math.ceil(total / limit),
+          hasMore: offset + history.length < total
         }
       });
     } catch (error) {
