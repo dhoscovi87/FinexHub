@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 const BASE_URL = 'https://sandbox.momodeveloper.mtn.com';
 const API_ENDPOINTS = {
-  token: `${BASE_URL}/collection/v1_0/token`,
+  token: `${BASE_URL}/collection/token`,
   apiUser: `${BASE_URL}/v1_0/apiuser`,
   requestToPay: `${BASE_URL}/collection/v1_0/requesttopay`,
   disbursement: `${BASE_URL}/disbursement/v1_0/transfer`,
@@ -227,10 +227,16 @@ export class MoMoAPI {
           status: response.status,
           statusText: response.statusText,
           error: parsedError,
-          endpoint: API_ENDPOINTS.token
+          endpoint: API_ENDPOINTS.token,
+          responseBody: errorText,
+          requestHeaders: {
+            'Authorization': 'Basic [hidden]',
+            'Ocp-Apim-Subscription-Key': '[hidden]',
+            'X-Target-Environment': 'sandbox'
+          }
         };
 
-        console.error('Token request failed:', errorDetails);
+        console.error('Token request failed:', JSON.stringify(errorDetails, null, 2));
 
         // Enhanced error handling based on status codes
         switch (response.status) {
