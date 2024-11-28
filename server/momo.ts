@@ -1,11 +1,11 @@
 import { v4 as uuidv4 } from 'uuid';
 
-const BASE_URL = 'https://sandbox.momodeveloper.mtn.com';
+const BASE_URL = 'https://sandbox.momodeveloper.mtn.com/v1_0';
 const API_ENDPOINTS = {
-  token: `${BASE_URL}/collection/v1_0/token`,
-  apiUser: `${BASE_URL}/v1_0/apiuser`,
-  requestToPay: `${BASE_URL}/collection/v1_0/requesttopay`,
-  disbursement: `${BASE_URL}/disbursement/v1_0/transfer`,
+  token: `${BASE_URL}/collection/token`,
+  apiUser: `${BASE_URL}/apiuser`,
+  requestToPay: `${BASE_URL}/collection/requesttopay`,
+  disbursement: `${BASE_URL}/disbursement/transfer`,
 };
 const TOKEN_VALIDITY_DURATION = 3600; // 1 hour in seconds
 
@@ -90,7 +90,7 @@ export class MoMoAPI {
    */
   async createApiUser(referenceId: string, callbackHost: string): Promise<void> {
     try {
-      const response = await fetch(`${BASE_URL}/v1_0/apiuser`, {
+      const response = await fetch(`${BASE_URL}/apiuser`, {
         method: 'POST',
         headers: {
           'X-Reference-Id': referenceId,
@@ -130,7 +130,7 @@ export class MoMoAPI {
    */
   async createApiKey(apiUserId: string): Promise<string> {
     try {
-      const response = await fetch(`${BASE_URL}/v1_0/apiuser/${apiUserId}/apikey`, {
+      const response = await fetch(`${BASE_URL}/apiuser/${apiUserId}/apikey`, {
         method: 'POST',
         headers: {
           'Ocp-Apim-Subscription-Key': this.subscriptionKey
@@ -158,7 +158,7 @@ export class MoMoAPI {
    */
   async getApiUserDetails(apiUserId: string): Promise<ApiUserResponse> {
     try {
-      const response = await fetch(`${BASE_URL}/v1_0/apiuser/${apiUserId}`, {
+      const response = await fetch(`${BASE_URL}/apiuser/${apiUserId}`, {
         method: 'GET',
         headers: {
           'Ocp-Apim-Subscription-Key': this.subscriptionKey
@@ -276,7 +276,7 @@ export class MoMoAPI {
     const referenceId = this.generateUUID();
 
     try {
-      const response = await fetch(`${BASE_URL}/collection/v1_0/requesttopay`, {
+      const response = await fetch(`${BASE_URL}/collection/requesttopay`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -319,7 +319,7 @@ export class MoMoAPI {
     const token = await this.getToken();
 
     try {
-      const response = await fetch(`${BASE_URL}/collection/v1_0/requesttopay/${referenceId}`, {
+      const response = await fetch(`${BASE_URL}/collection/requesttopay/${referenceId}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -355,7 +355,7 @@ export class MoMoAPI {
     const referenceId = this.generateUUID();
 
     try {
-      const response = await fetch(`${BASE_URL}/disbursement/v1_0/transfer`, {
+      const response = await fetch(`${BASE_URL}/disbursement/transfer`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -398,7 +398,7 @@ export class MoMoAPI {
     const token = await this.getToken();
 
     try {
-      const response = await fetch(`${BASE_URL}/disbursement/v1_0/transfer/${referenceId}`, {
+      const response = await fetch(`${BASE_URL}/disbursement/transfer/${referenceId}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
