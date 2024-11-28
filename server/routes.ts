@@ -1,8 +1,11 @@
 import { Express } from "express";
 import { db } from "../db";
 import { wallets, transactions } from "@db/schema";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, and } from "drizzle-orm";
 import { momoApi } from "./momo";
+
+const DEPOSIT_CALLBACK_URL = process.env.DEPOSIT_CALLBACK_URL || 'https://your-callback-url.com/momo/deposit';
+const WITHDRAWAL_CALLBACK_URL = process.env.WITHDRAWAL_CALLBACK_URL || 'https://your-callback-url.com/momo/withdrawal';
 
 export function registerRoutes(app: Express) {
   // Get user balances
@@ -34,32 +37,33 @@ export function registerRoutes(app: Express) {
       const search = req.query.search as string;
       const offset = (page - 1) * limit;
 
-      const baseQuery = db
-        .select()
-        .from(transactions)
-        .where(eq(transactions.userId, userId));
-
-      const searchCondition = search
-        ? sql`(
+      const conditions = [eq(transactions.userId, userId)];
+      
+      if (search) {
+        conditions.push(
+          sql`(
             LOWER(type) LIKE ${`%${search.toLowerCase()}%`} OR 
             CAST(amount AS TEXT) LIKE ${`%${search}%`} OR
             LOWER(COALESCE(note, '')) LIKE ${`%${search.toLowerCase()}%`}
           )`
-        : undefined;
+        );
+      }
 
-      const finalQuery = searchCondition
-        ? baseQuery.where(searchCondition)
-        : baseQuery;
+      const query = db
+        .select()
+        .from(transactions)
+        .where(and(...conditions));
 
       // Get total count for pagination
       const [countResult] = await db
         .select({ count: sql<number>`count(*)::int` })
-        .from(finalQuery.as("filtered_transactions"));
+        .from(transactions)
+        .where(and(...conditions));
 
       const total = countResult?.count || 0;
 
       // Get paginated transactions sorted by newest first
-      const history = await finalQuery
+      const history = await query
         .orderBy(desc(transactions.createdAt))
         .limit(limit)
         .offset(offset);
@@ -140,6 +144,201 @@ export function registerRoutes(app: Express) {
       console.error("MoMo API error:", error);
       res.status(500).json({ 
         error: "Failed to get MoMo API user details",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // MoMo deposit endpoint
+  app.post("/api/deposit/momo", async (req, res) => {
+    try {
+      const userId = 1; // Replace with actual authenticated user ID
+      const { amount, phoneNumber, note } = req.body;
+
+      if (!amount || !phoneNumber) {
+        return res.status(400).json({ error: "Amount and phone number are required" });
+      }
+
+      // Create a pending transaction
+      const [transaction] = await db
+        .insert(transactions)
+        .values({
+          userId,
+          type: "momo_deposit",
+          amount,
+          currency: "CFA",
+          status: "pending",
+          momoPhoneNumber: phoneNumber,
+          note: note || "MoMo deposit",
+        })
+        .returning();
+
+      // Request payment from user's mobile money account
+      const referenceId = await momoApi.requestToPay(
+        Number(amount),
+        "EUR",
+        phoneNumber,
+        note || "MoMo deposit"
+      );
+
+      // Update transaction with reference ID
+      await db
+        .update(transactions)
+        .set({ momoReferenceId: referenceId })
+        .where(eq(transactions.id, transaction.id));
+
+      // Start polling for payment status
+      const checkPaymentStatus = async () => {
+        try {
+          const status = await momoApi.getPaymentStatus(referenceId);
+          
+          if (status.status !== "PENDING") {
+            // Update transaction status
+            await db.transaction(async (tx) => {
+              const [updatedTx] = await tx
+                .update(transactions)
+                .set({
+                  status: status.status === "SUCCESSFUL" ? "completed" : "failed",
+                  momoStatus: status.status,
+                })
+                .where(eq(transactions.id, transaction.id))
+                .returning();
+
+              if (status.status === "SUCCESSFUL") {
+                // Update wallet balance
+                await tx
+                  .update(wallets)
+                  .set({
+                    cfaBalance: sql`"cfa_balance" + ${updatedTx.amount}`,
+                  })
+                  .where(eq(wallets.userId, userId));
+              }
+            });
+            return;
+          }
+
+          // Continue polling if still pending
+          setTimeout(checkPaymentStatus, 5000);
+        } catch (error) {
+          console.error("Payment status check failed:", error);
+        }
+      };
+
+      // Start the polling process
+      setTimeout(checkPaymentStatus, 5000);
+
+      res.json({
+        message: "Deposit initiated",
+        transactionId: transaction.id,
+        referenceId
+      });
+    } catch (error) {
+      console.error("MoMo deposit error:", error);
+      res.status(500).json({
+        error: "Failed to initiate deposit",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // MoMo withdrawal endpoint
+  app.post("/api/withdraw/momo", async (req, res) => {
+    try {
+      const userId = 1; // Replace with actual authenticated user ID
+      const { amount, phoneNumber, note } = req.body;
+
+      if (!amount || !phoneNumber) {
+        return res.status(400).json({ error: "Amount and phone number are required" });
+      }
+
+      // Check if user has sufficient balance
+      const [wallet] = await db
+        .select()
+        .from(wallets)
+        .where(eq(wallets.userId, userId))
+        .limit(1);
+
+      if (!wallet || wallet.cfaBalance < amount) {
+        return res.status(400).json({ error: "Insufficient balance" });
+      }
+
+      // Create a pending transaction
+      const [transaction] = await db
+        .insert(transactions)
+        .values({
+          userId,
+          type: "momo_withdrawal",
+          amount,
+          currency: "CFA",
+          status: "pending",
+          momoPhoneNumber: phoneNumber,
+          note: note || "MoMo withdrawal",
+        })
+        .returning();
+
+      // Initialize transfer to user's mobile money account
+      const referenceId = await momoApi.transfer(
+        Number(amount),
+        "EUR",
+        phoneNumber,
+        note || "MoMo withdrawal"
+      );
+
+      // Update transaction with reference ID
+      await db
+        .update(transactions)
+        .set({ momoReferenceId: referenceId })
+        .where(eq(transactions.id, transaction.id));
+
+      // Start polling for transfer status
+      const checkTransferStatus = async () => {
+        try {
+          const status = await momoApi.getTransferStatus(referenceId);
+          
+          if (status.status !== "PENDING") {
+            // Update transaction status
+            await db.transaction(async (tx) => {
+              const [updatedTx] = await tx
+                .update(transactions)
+                .set({
+                  status: status.status === "SUCCESSFUL" ? "completed" : "failed",
+                  momoStatus: status.status,
+                })
+                .where(eq(transactions.id, transaction.id))
+                .returning();
+
+              if (status.status === "SUCCESSFUL") {
+                // Update wallet balance
+                await tx
+                  .update(wallets)
+                  .set({
+                    cfaBalance: sql`"cfa_balance" - ${updatedTx.amount}`,
+                  })
+                  .where(eq(wallets.userId, userId));
+              }
+            });
+            return;
+          }
+
+          // Continue polling if still pending
+          setTimeout(checkTransferStatus, 5000);
+        } catch (error) {
+          console.error("Transfer status check failed:", error);
+        }
+      };
+
+      // Start the polling process
+      setTimeout(checkTransferStatus, 5000);
+
+      res.json({
+        message: "Withdrawal initiated",
+        transactionId: transaction.id,
+        referenceId
+      });
+    } catch (error) {
+      console.error("MoMo withdrawal error:", error);
+      res.status(500).json({
+        error: "Failed to initiate withdrawal",
         details: error instanceof Error ? error.message : "Unknown error"
       });
     }

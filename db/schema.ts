@@ -25,12 +25,15 @@ export const wallets = pgTable("wallets", {
 export const transactions = pgTable("transactions", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
   userId: integer("user_id").references(() => users.id).notNull(),
-  type: text("type", { enum: ["send", "receive", "swap", "cashout"] }).notNull(),
+  type: text("type", { enum: ["send", "receive", "swap", "cashout", "momo_deposit", "momo_withdrawal"] }).notNull(),
   amount: decimal("amount", { precision: 18, scale: 8 }).notNull(),
   currency: text("currency", { enum: ["HBAR", "USDC", "CFA"] }).notNull(),
   status: text("status", { enum: ["pending", "completed", "failed"] }).notNull(),
   recipientId: integer("recipient_id").references(() => users.id),
   note: text("note"),
+  momoReferenceId: text("momo_reference_id"),
+  momoPhoneNumber: text("momo_phone_number"),
+  momoStatus: text("momo_status", { enum: ["PENDING", "SUCCESSFUL", "FAILED"] }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
