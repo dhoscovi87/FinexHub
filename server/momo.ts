@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 const BASE_URL = 'https://sandbox.momodeveloper.mtn.com/v1_0';
 const API_ENDPOINTS = {
-  token: `${BASE_URL}/collection/token`,
+  token: `${BASE_URL}/collection/v1_0/token`,
   apiUser: `${BASE_URL}/apiuser`,
   requestToPay: `${BASE_URL}/collection/v1_0/requesttopay`,
   disbursement: `${BASE_URL}/disbursement/v1_0/transfer`,
@@ -177,12 +177,18 @@ export class MoMoAPI {
 
     try {
       console.log('Requesting new access token...');
+      console.log('Request URL:', API_ENDPOINTS.token);
+      
       const auth = Buffer.from(`${this.apiUser}:${this.apiKey}`).toString('base64');
+      // Log authorization header format without credentials
+      console.log('Authorization header format: Basic [credentials]');
+      
       const response = await fetch(API_ENDPOINTS.token, {
         method: 'POST',
         headers: {
           'Authorization': `Basic ${auth}`,
           'Ocp-Apim-Subscription-Key': this.subscriptionKey,
+          'X-Target-Environment': 'sandbox',
         }
       });
 
@@ -194,12 +200,36 @@ export class MoMoAPI {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Token request failed:', {
+        let parsedError;
+        try {
+          parsedError = JSON.parse(errorText);
+        } catch {
+          parsedError = { message: errorText };
+        }
+
+        const errorDetails = {
           status: response.status,
           statusText: response.statusText,
-          error: errorText
-        });
-        throw new MoMoError(`Failed to get token: ${errorText}`, response.status);
+          error: parsedError,
+          endpoint: API_ENDPOINTS.token
+        };
+
+        console.error('Token request failed:', errorDetails);
+
+        // Enhanced error handling based on status codes
+        switch (response.status) {
+          case 401:
+            throw new MoMoError('Authentication failed. Please check API credentials.', response.status);
+          case 403:
+            throw new MoMoError('Access forbidden. Please verify subscription key and permissions.', response.status);
+          case 404:
+            throw new MoMoError('Token endpoint not found. Please verify API configuration.', response.status);
+          default:
+            throw new MoMoError(
+              `Failed to get token: ${parsedError.message || errorText}`,
+              response.status
+            );
+        }
       }
 
       const data: TokenResponse = await response.json();
