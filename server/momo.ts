@@ -15,7 +15,7 @@ const agent = new https.Agent({
 
 const BASE_URL = 'https://sandbox.momodeveloper.mtn.com';
 const API_ENDPOINTS = {
-  token: `${BASE_URL}/collection/v2/token`,
+  token: `${BASE_URL}/collection/v1_0/token`,
   apiUser: `${BASE_URL}/v1_0/apiuser`,
   requestToPay: `${BASE_URL}/collection/v1_0/requesttopay`,
   disbursement: `${BASE_URL}/disbursement/v1_0/transfer`
@@ -245,7 +245,9 @@ export class MoMoAPI {
         headers: {
           'Authorization': `Basic ${auth}`,
           'Ocp-Apim-Subscription-Key': this.subscriptionKey,
-          'X-Target-Environment': 'sandbox'
+          'X-Target-Environment': 'sandbox',
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache'
         }
       });
 
